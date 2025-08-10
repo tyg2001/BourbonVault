@@ -1,0 +1,194 @@
+@page "/collection"
+@using BourbonVault.Core.DTOs
+@using BourbonVault.Web.Services
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+@attribute [Authorize]
+@inject IBottleService BottleService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<h1>My Bourbon Collection</h1>
+
+<div class="mb-3 d-flex justify-content-between align-items-center">
+    <div>
+        <button class="btn btn-primary" @onclick='@(() => NavigationManager.NavigateTo($"/collection/add"))'>
+            <span class="oi oi-plus"></span> Add Bottle
+        </button>
+    </div>
+    <div class="input-group" style="max-width: 300px">
+        <input type="text" class="form-control" placeholder="Search collection..."
+               @bind-value="searchTerm" @bind-value:event="oninput" @onkeyup="FilterCollection" />
+        <span class="input-group-text">
+            <span class="oi oi-magnifying-glass"></span>
+        </span>
+    </div>
+</div>
+
+@if (loading)
+{
+    <div class="d-flex justify-content-center mt-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (bottles == null || !bottles.Any())
+{
+    <div class="alert alert-info">
+        <h4>Your collection is empty</h4>
+        <p>Start building your bourbon collection by adding your first bottle!</p>
+        <button class="btn btn-primary" @onclick='@(() => NavigationManager.NavigateTo($"/collection/add"))'>
+            Add Your First Bottle
+        </button>
+    </div>
+}
+else
+{
+    <div class="row g-4">
+        @foreach (var bottle in filteredBottles)
+        {
+            <div class="col-md-6 col-lg-4 col-xl-3">
+                <div class="card h-100 bottle-card">
+                    <div class="position-relative">
+                        <img src="@GetBottleImage(bottle)" class="card-img-top" alt="@bottle.Name" style="height: 200px; object-fit: cover;">
+                        
+                        <div class="position-absolute top-0 end-0 m-2">
+                            <span class="badge bg-primary">@bottle.Status</span>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body">
+                        <h5 class="card-title">@bottle.Name</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">@bottle.DistilleryName</h6>
+                        
+                        <div class="small mb-2">
+                            <div><strong>Type:</strong> @bottle.Type</div>
+                            <div><strong>Age:</strong> @(bottle.AgeYears > 0 ? $"{bottle.AgeYears} Years" : "NAS")</div>
+                            <div><strong>Proof:</strong> @bottle.Proof</div>
+                            <div><strong>Purchase Price:</strong> @(bottle.PurchasePrice.HasValue ? $"${bottle.PurchasePrice:F2}" : "N/A")</div>
+                        </div>
+                        
+                        @if (bottle.TastingNotesCount > 0)
+                        {
+                            <div class="mb-2">
+                                <div class="d-flex align-items-center">
+                                    <span class="me-2">Rating:</span>
+                                    <div class="rating">
+                                        @{
+                                            var rating = bottle.AverageRating.HasValue ? Math.Round(bottle.AverageRating.Value) : 0;
+                                            for (int i = 1; i <= 5; i++)
+                                            {
+                                                if (i <= rating)
+                                                {
+                                                    <span class="oi oi-star text-warning"></span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="oi oi-star text-muted"></span>
+                                                }
+                                            }
+                                        }
+                                    </div>
+                                    <span class="ms-2 text-muted small">(@bottle.TastingNotesCount @(bottle.TastingNotesCount == 1 ? "note" : "notes"))</span>
+                                </div>
+                            </div>
+                        }
+                        
+                        @if (bottle.Tags != null && bottle.Tags.Any())
+                        {
+                            <div class="mb-2">
+                                @foreach (var tag in bottle.Tags)
+                                {
+                                    <span class="badge bg-secondary me-1 mb-1">@tag</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                    
+                    <div class="card-footer">
+                        <div class="btn-group w-100">
+                            <button class="btn btn-outline-primary" @onclick='@(() => NavigationManager.NavigateTo($"/collection/details/{bottle.Id}"))'>
+                                <span class="oi oi-eye"></span> View
+                            </button>
+                            <button class="btn btn-outline-secondary" @onclick='@(() => NavigationManager.NavigateTo($"/collection/edit/{bottle.Id}"))'>
+                                <span class="oi oi-pencil"></span> Edit
+                            </button>
+                            <button class="btn btn-outline-danger" @onclick="() => DeleteBottle(bottle.Id)">
+                                <span class="oi oi-trash"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private IEnumerable<BottleDto> bottles;
+    private IEnumerable<BottleDto> filteredBottles;
+    private bool loading = true;
+    private string searchTerm = "";
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBottles();
+    }
+    
+    private async Task LoadBottles()
+    {
+        loading = true;
+        bottles = await BottleService.GetAllBottlesAsync();
+        filteredBottles = bottles;
+        loading = false;
+    }
+    
+    private void FilterCollection()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredBottles = bottles;
+        }
+        else
+        {
+            filteredBottles = bottles.Where(b => 
+                b.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                b.DistilleryName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true ||
+                b.Type?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true ||
+                (b.Tags?.Any(t => t.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ?? false)
+            );
+        }
+    }
+    
+    private async Task DeleteBottle(int id)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this bottle?"))
+        {
+            return;
+        }
+        
+        var success = await BottleService.DeleteBottleAsync(id);
+        
+        if (success)
+        {
+            await LoadBottles();
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Failed to delete the bottle.");
+        }
+    }
+
+    private string GetBottleImage(BottleDto bottle)
+    {
+        if (!string.IsNullOrWhiteSpace(bottle.ImageUrl))
+            return bottle.ImageUrl;
+
+        var type = bottle.Type?.ToLowerInvariant() ?? string.Empty;
+        if (type.Contains("rye")) return "images/bourbon/placeholder-rye.svg";
+        if (type.Contains("scotch")) return "images/bourbon/placeholder-scotch.svg";
+        // default to bourbon
+        return "images/bourbon/placeholder-bourbon.svg";
+    }
+}

@@ -1,0 +1,40 @@
+@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+@inject BourbonVault.Web.Services.IAuthService AuthService
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+            <AuthorizeView>
+                <Authorized>
+                    <div class="d-flex align-items-center">
+                        <span class="me-3">Welcome, @context.User.FindFirst("DisplayName")?.Value!</span>
+                        <button class="btn btn-link" @onclick="LogoutClick">Logout</button>
+                    </div>
+                </Authorized>
+                <NotAuthorized>
+                    <a href="login" class="btn btn-primary me-2">Login</a>
+                    <a href="register" class="btn btn-outline-primary">Register</a>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code {
+    private async Task LogoutClick()
+    {
+        await AuthService.Logout();
+        NavigationManager.NavigateTo("/login");
+    }
+}

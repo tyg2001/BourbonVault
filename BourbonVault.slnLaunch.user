@@ -1,0 +1,15 @@
+[
+  {
+    "Name": "New Profile",
+    "Projects": [
+      {
+        "Path": "BourbonVault.API\\BourbonVault.API.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "BourbonVault.Web\\BourbonVault.Web.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

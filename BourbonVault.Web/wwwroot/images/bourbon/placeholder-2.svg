@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400">
+  <defs>
+    <linearGradient id="b" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#3f1f12"/>
+      <stop offset="100%" stop-color="#7c3e1d"/>
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="#fcf7ee"/>
+  <rect x="30" y="30" width="540" height="340" rx="14" fill="url(#b)"/>
+  <g transform="translate(140,70)">
+    <rect x="110" y="20" width="60" height="260" rx="10" fill="#b45309" stroke="#92400e" stroke-width="3"/>
+    <rect x="122" y="0" width="36" height="24" rx="4" fill="#854d0e"/>
+    <circle cx="140" cy="140" r="42" fill="#fef3c7" stroke="#f59e0b"/>
+    <text x="140" y="146" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="#7c2d12">Single</text>
+    <text x="140" y="164" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="#7c2d12">Barrel</text>
+  </g>
+</svg>

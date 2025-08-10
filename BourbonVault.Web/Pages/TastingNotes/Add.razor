@@ -1,0 +1,353 @@
+@page "/tastingnotes/add"
+@page "/tastingnotes/add/{BottleId:int}"
+@using BourbonVault.Core.DTOs
+@using BourbonVault.Web.Services
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject ITastingNoteService TastingNoteService
+@inject IBottleService BottleService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-3">
+    <h1>Add Tasting Note</h1>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <EditForm Model="@tastingNoteModel" OnValidSubmit="HandleValidSubmit">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="bottleId">Bottle</label>
+                                    <div>
+                                        @if (loading)
+                                        {
+                                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                            <span class="ms-2">Loading bottles...</span>
+                                        }
+                                        else if (bottles == null || !bottles.Any())
+                                        {
+                                            <select class="form-select" disabled>
+                                                <option>No bottles found</option>
+                                            </select>
+                                            <div class="mt-2">
+                                                <a href="/collection/add" class="btn btn-sm btn-primary">Add a Bottle First</a>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <InputSelect id="bottleId" class="form-select" @bind-Value="tastingNoteModel.BottleId" @onchange="OnBottleSelected">
+                                                <option value="0">Select a bottle...</option>
+                                                @foreach (var bottle in bottles)
+                                                {
+                                                    <option value="@bottle.Id">@bottle.Name (@bottle.DistilleryName)</option>
+                                                }
+                                            </InputSelect>
+                                            <ValidationMessage For="@(() => tastingNoteModel.BottleId)" />
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="tastingDate">Tasting Date</label>
+                                    <InputDate id="tastingDate" class="form-control" @bind-Value="tastingNoteModel.TastingDate" />
+                                    <ValidationMessage For="@(() => tastingNoteModel.TastingDate)" />
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="setting">Tasting Setting</label>
+                            <InputText id="setting" class="form-control" @bind-Value="tastingNoteModel.Setting" placeholder="e.g., Home, Bar, Tasting Event" />
+                            <ValidationMessage For="@(() => tastingNoteModel.Setting)" />
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="glassType">Glass Type</label>
+                            <InputSelect id="glassType" class="form-select" @bind-Value="tastingNoteModel.GlassType">
+                                <option value="">Select Glass Type...</option>
+                                <option value="Glencairn">Glencairn</option>
+                                <option value="Rocks Glass">Rocks Glass</option>
+                                <option value="Neat Glass">Neat Glass</option>
+                                <option value="Snifter">Snifter</option>
+                                <option value="Copita">Copita</option>
+                                <option value="Tulip">Tulip</option>
+                                <option value="Shot Glass">Shot Glass</option>
+                                <option value="Other">Other</option>
+                            </InputSelect>
+                            <ValidationMessage For="@(() => tastingNoteModel.GlassType)" />
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="restTime">Rest Time (minutes)</label>
+                            <InputNumber id="restTime" class="form-control" @bind-Value="tastingNoteModel.RestTimeMinutes" />
+                            <ValidationMessage For="@(() => tastingNoteModel.RestTimeMinutes)" />
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="form-group mb-2">
+                                    <label for="rating">Rating (1-5)</label>
+                                    <div class="rating-input d-flex align-items-center">
+                                        @for (int i = 1; i <= 5; i++)
+                                        {
+                                            int rating = i;
+                                            <span class="star-rating me-2 @(tastingNoteModel.Rating >= rating ? "active" : "")" 
+                                                  @onclick="() => tastingNoteModel.Rating = rating">
+                                                <span class="oi oi-star"></span>
+                                            </span>
+                                        }
+                                        <span class="ms-2">@tastingNoteModel.Rating/5</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h5 class="mt-4 mb-3">Tasting Notes</h5>
+                        
+                        <div class="form-group mb-3">
+                            <label for="appearance">Appearance</label>
+                            <InputTextArea id="appearance" class="form-control" @bind-Value="tastingNoteModel.Appearance" rows="2" 
+                                          placeholder="Color, clarity, legs, etc." />
+                            <ValidationMessage For="@(() => tastingNoteModel.Appearance)" />
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="nose">Nose</label>
+                            <InputTextArea id="nose" class="form-control" @bind-Value="tastingNoteModel.Nose" rows="3" 
+                                          placeholder="Aromas, intensity, etc." />
+                            <ValidationMessage For="@(() => tastingNoteModel.Nose)" />
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="palate">Palate</label>
+                            <InputTextArea id="palate" class="form-control" @bind-Value="tastingNoteModel.Palate" rows="3" 
+                                          placeholder="Flavors, mouthfeel, etc." />
+                            <ValidationMessage For="@(() => tastingNoteModel.Palate)" />
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="finish">Finish</label>
+                            <InputTextArea id="finish" class="form-control" @bind-Value="tastingNoteModel.Finish" rows="3" 
+                                          placeholder="Length, flavors, etc." />
+                            <ValidationMessage For="@(() => tastingNoteModel.Finish)" />
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="additionalNotes">Additional Notes</label>
+                            <InputTextArea id="additionalNotes" class="form-control" @bind-Value="tastingNoteModel.AdditionalNotes" rows="3" 
+                                          placeholder="Other thoughts, comparisons, etc." />
+                            <ValidationMessage For="@(() => tastingNoteModel.AdditionalNotes)" />
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <InputCheckbox id="isPublic" class="form-check-input" @bind-Value="tastingNoteModel.IsPublic" />
+                            <label class="form-check-label" for="isPublic">
+                                Make this tasting note public
+                            </label>
+                            <div class="form-text">
+                                Public notes can be seen by other bourbon enthusiasts
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <button type="button" class="btn btn-secondary" @onclick="NavigateBack">Cancel</button>
+                            <button type="submit" class="btn btn-primary" disabled="@(isProcessing || tastingNoteModel.BottleId <= 0)">
+                                @if (isProcessing)
+                                {
+                                    <span class="spinner-border spinner-border-sm mr-1"></span>
+                                    <span>Saving...</span>
+                                }
+                                else
+                                {
+                                    <span>Save Tasting Note</span>
+                                }
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Selected Bottle</h5>
+                </div>
+                <div class="card-body">
+                    @if (selectedBottle == null)
+                    {
+                        <div class="text-center py-4">
+                            <span class="oi oi-question-mark" style="font-size: 2rem;"></span>
+                            <p class="mt-3">Select a bottle to see details</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center mb-3">
+                            @if (!string.IsNullOrEmpty(selectedBottle.ImageUrl))
+                            {
+                                <img src="@selectedBottle.ImageUrl" alt="@selectedBottle.Name" style="max-height: 180px; max-width: 100%;" class="img-thumbnail" />
+                            }
+                            else
+                            {
+                                <div class="placeholder-image d-flex justify-content-center align-items-center bg-light" style="height: 180px;">
+                                    <span class="oi oi-image text-secondary" style="font-size: 3rem;"></span>
+                                </div>
+                            }
+                        </div>
+                        
+                        <h5>@selectedBottle.Name</h5>
+                        <p class="text-muted">@selectedBottle.DistilleryName</p>
+                        
+                        <div class="bottle-details small">
+                            <div><strong>Type:</strong> @selectedBottle.Type</div>
+                            <div><strong>Age:</strong> @(selectedBottle.AgeYears > 0 ? $"{selectedBottle.AgeYears} Years" : "NAS")</div>
+                            <div><strong>Proof:</strong> @selectedBottle.Proof</div>
+                        </div>
+                    }
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Tasting Tips</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <strong>Appearance:</strong> Note color depth, clarity, and legs/tears on the glass
+                        </li>
+                        <li class="mb-2">
+                            <strong>Nose:</strong> Try both a gentle sniff and a deeper one to detect different aromas
+                        </li>
+                        <li class="mb-2">
+                            <strong>Palate:</strong> Let it sit on your tongue before swallowing to detect different flavors
+                        </li>
+                        <li class="mb-2">
+                            <strong>Finish:</strong> Pay attention to how long flavors persist after swallowing
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .star-rating {
+        cursor: pointer;
+        font-size: 1.5rem;
+        color: #ccc;
+    }
+    
+    .star-rating.active {
+        color: #ffc107;
+    }
+    
+    .tasting-sections .tasting-section {
+        margin-bottom: 1rem;
+    }
+    
+    .tasting-sections .tasting-section h6 {
+        margin-bottom: 0.25rem;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public int? BottleId { get; set; }
+    
+    private TastingNoteCreateDto tastingNoteModel = new TastingNoteCreateDto
+    {
+        TastingDate = DateTime.Now,
+        Rating = 0,
+        IsPublic = false
+    };
+    
+    private IEnumerable<BottleDto> bottles;
+    private BottleDto selectedBottle;
+    private bool loading = true;
+    private bool isProcessing = false;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        // Load bottles for dropdown
+        await LoadBottles();
+        
+        // Set the bottle ID if provided in route parameter
+        if (BottleId.HasValue && BottleId.Value > 0)
+        {
+            tastingNoteModel.BottleId = BottleId.Value;
+            await OnBottleSelected();
+        }
+    }
+    
+    private async Task LoadBottles()
+    {
+        try
+        {
+            loading = true;
+            bottles = await BottleService.GetAllBottlesAsync();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", $"Error loading bottles: {ex.Message}");
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+    
+    private async Task OnBottleSelected()
+    {
+        if (tastingNoteModel.BottleId > 0)
+        {
+            selectedBottle = await BottleService.GetBottleByIdAsync(tastingNoteModel.BottleId);
+        }
+        else
+        {
+            selectedBottle = null;
+        }
+    }
+    
+    private void NavigateBack()
+    {
+        NavigationManager.NavigateTo("/tastingnotes");
+    }
+    
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            isProcessing = true;
+            
+            var result = await TastingNoteService.CreateTastingNoteAsync(tastingNoteModel);
+            
+            if (result != null)
+            {
+                NavigationManager.NavigateTo("/tastingnotes");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Failed to save tasting note. Please try again.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"An error occurred: {ex.Message}");
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+}

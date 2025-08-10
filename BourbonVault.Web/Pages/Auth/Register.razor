@@ -1,0 +1,158 @@
+@page "/register"
+@using BourbonVault.Core.DTOs
+@using BourbonVault.Web.Services
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-dark text-white text-center">
+                    <h2>Bourbon Vault</h2>
+                    <h4>Register</h4>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="@registerModel" OnValidSubmit="HandleRegistration">
+                        <DataAnnotationsValidator />
+                        
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="alert alert-danger">
+                                @errorMessage
+                            </div>
+                        }
+                        
+                        <div class="form-group mb-3">
+                            <label for="username">Username</label>
+                            <InputText id="username" class="form-control" @bind-Value="registerModel.Username" />
+                            <ValidationMessage For="@(() => registerModel.Username)" />
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="displayName">Display Name</label>
+                            <InputText id="displayName" class="form-control" @bind-Value="registerModel.DisplayName" />
+                            <ValidationMessage For="@(() => registerModel.DisplayName)" />
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="email">Email</label>
+                            <InputText id="email" class="form-control" @bind-Value="registerModel.Email" @oninput="CheckEmailAvailability" />
+                            <ValidationMessage For="@(() => registerModel.Email)" />
+                            @if (isCheckingEmail)
+                            {
+                                <small class="text-info">Checking email availability...</small>
+                            }
+                            else if (!string.IsNullOrEmpty(registerModel.Email) && emailExists)
+                            {
+                                <small class="text-danger">This email is already registered</small>
+                            }
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="password">Password</label>
+                            <InputText id="password" class="form-control" type="password" @bind-Value="registerModel.Password" />
+                            <ValidationMessage For="@(() => registerModel.Password)" />
+                            <small class="form-text text-muted">Password must be at least 6 characters and contain uppercase, lowercase, and numeric characters.</small>
+                        </div>
+                        
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary" disabled="@(isLoading || (emailExists && !string.IsNullOrEmpty(registerModel.Email)))">
+                                @if (isLoading)
+                                {
+                                    <span class="spinner-border spinner-border-sm mr-1"></span>
+                                    <span>Registering...</span>
+                                }
+                                else
+                                {
+                                    <span>Register</span>
+                                }
+                            </button>
+                        </div>
+                        
+                        <div class="text-center mt-3">
+                            <a href="/login">Already have an account? Login here</a>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private RegisterDto registerModel = new RegisterDto();
+    private string errorMessage;
+    private bool isLoading;
+    private bool emailExists;
+    private bool isCheckingEmail;
+    private Timer emailCheckTimer;
+
+    private async Task HandleRegistration()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+
+            var result = await AuthService.Register(registerModel);
+
+            if (result.Success)
+            {
+                NavigationManager.NavigateTo("/");
+            }
+            else
+            {
+                errorMessage = result.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An error occurred during registration. Please try again.";
+            Console.WriteLine(ex.ToString());
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void CheckEmailAvailability(ChangeEventArgs e)
+    {
+        string email = e.Value?.ToString() ?? string.Empty;
+        
+        // Dispose of existing timer if any
+        emailCheckTimer?.Dispose();
+        
+        if (!string.IsNullOrWhiteSpace(email) && email.Contains("@"))
+        {
+            isCheckingEmail = true;
+            
+            // Wait for 500ms after user stops typing before checking
+            emailCheckTimer = new Timer(async _ =>
+            {
+                await InvokeAsync(async () =>
+                {
+                    try 
+                    {
+                        emailExists = await AuthService.CheckEmailExistsAsync(email);
+                    }
+                    catch 
+                    {
+                        emailExists = false;
+                    }
+                    finally
+                    {
+                        isCheckingEmail = false;
+                        StateHasChanged();
+                    }
+                });
+            }, null, 500, Timeout.Infinite);
+        }
+        else
+        {
+            isCheckingEmail = false;
+            emailExists = false;
+        }
+    }
+}

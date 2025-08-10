@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#5a2a0f"/>
+      <stop offset="100%" stop-color="#2b1a12"/>
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#bg)"/>
+  <g transform="translate(210,60)">
+    <rect x="70" y="40" width="100" height="240" rx="8" fill="#d97706" stroke="#a16207" stroke-width="3"/>
+    <rect x="95" y="14" width="50" height="40" rx="6" fill="#9a3412"/>
+    <rect x="86" y="115" width="68" height="70" fill="#fef3c7" stroke="#f59e0b"/>
+    <text x="120" y="152" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="#92400e">Bourbon</text>
+  </g>
+</svg>

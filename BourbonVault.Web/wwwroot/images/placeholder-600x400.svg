@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400">
+  <rect width="100%" height="100%" fill="#f3f4f6"/>
+  <rect x="10" y="10" width="580" height="380" fill="#e5e7eb" stroke="#d1d5db"/>
+  <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"
+        font-family="Arial, Helvetica, sans-serif" font-size="24" fill="#6b7280">
+    600 x 400
+  </text>
+  <text x="50%" y="70%" dominant-baseline="middle" text-anchor="middle"
+        font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#9ca3af">
+    Bourbon Vault Placeholder
+  </text>
+</svg>

@@ -1,0 +1,15 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs
+/BourbonVault.API/bin
+/BourbonVault.API/obj
+/BourbonVault.Core/bin
+/BourbonVault.Core/obj
+/BourbonVault.Data/bin
+/BourbonVault.Data/obj
+/BourbonVault.Tests.Integration/bin
+/BourbonVault.Tests.Integration/obj
+/BourbonVault.Web/bin
+/BourbonVault.Web/obj

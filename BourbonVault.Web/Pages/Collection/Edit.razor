@@ -1,0 +1,327 @@
+@page "/collection/edit/{Id:int}"
+@using BourbonVault.Core.DTOs
+@using BourbonVault.Web.Services
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject IBottleService BottleService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-3">
+    @if (loading)
+    {
+        <div class="text-center mt-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading bottle details...</p>
+        </div>
+    }
+    else if (bottle == null)
+    {
+        <div class="alert alert-danger">
+            <h4>Bottle Not Found</h4>
+            <p>The requested bottle could not be found.</p>
+            <button class="btn btn-primary" @onclick="NavigateBack">Return to Collection</button>
+        </div>
+    }
+    else
+    {
+        <h1>Edit Bottle</h1>
+        
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-body">
+                        <EditForm Model="@bottleModel" OnValidSubmit="HandleValidSubmit">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary />
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="name">Bottle Name</label>
+                                        <InputText id="name" class="form-control" @bind-Value="bottleModel.Name" />
+                                        <ValidationMessage For="@(() => bottleModel.Name)" />
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="distilleryName">Distillery</label>
+                                        <InputText id="distilleryName" class="form-control" @bind-Value="bottleModel.DistilleryName" />
+                                        <ValidationMessage For="@(() => bottleModel.DistilleryName)" />
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="type">Type</label>
+                                        <InputSelect id="type" class="form-select" @bind-Value="bottleModel.Type">
+                                            <option value="">Select Type...</option>
+                                            <option value="Bourbon">Bourbon</option>
+                                            <option value="Rye">Rye</option>
+                                            <option value="American Whiskey">American Whiskey</option>
+                                            <option value="Scotch">Scotch</option>
+                                            <option value="Irish Whiskey">Irish Whiskey</option>
+                                            <option value="Japanese Whisky">Japanese Whisky</option>
+                                            <option value="Canadian Whisky">Canadian Whisky</option>
+                                            <option value="Other">Other</option>
+                                        </InputSelect>
+                                        <ValidationMessage For="@(() => bottleModel.Type)" />
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="ageYears">Age (Years)</label>
+                                        <InputNumber id="ageYears" class="form-control" @bind-Value="bottleModel.AgeYears" />
+                                        <ValidationMessage For="@(() => bottleModel.AgeYears)" />
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="proof">Proof</label>
+                                        <InputNumber id="proof" class="form-control" @bind-Value="bottleModel.Proof" step="0.1" />
+                                        <ValidationMessage For="@(() => bottleModel.Proof)" />
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="bottleSize">Bottle Size (ml)</label>
+                                        <InputNumber id="bottleSize" class="form-control" @bind-Value="bottleModel.BottleSizeML" />
+                                        <ValidationMessage For="@(() => bottleModel.BottleSizeML)" />
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="purchaseDate">Purchase Date</label>
+                                        <InputDate id="purchaseDate" class="form-control" @bind-Value="bottleModel.PurchaseDate" />
+                                        <ValidationMessage For="@(() => bottleModel.PurchaseDate)" />
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="purchasePrice">Purchase Price ($)</label>
+                                        <InputNumber id="purchasePrice" class="form-control" @bind-Value="bottleModel.PurchasePrice" step="0.01" />
+                                        <ValidationMessage For="@(() => bottleModel.PurchasePrice)" />
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="status">Bottle Status</label>
+                                        <InputSelect id="status" class="form-select" @bind-Value="bottleModel.Status">
+                                            <option value="Sealed">Sealed</option>
+                                            <option value="Opened">Opened</option>
+                                            <option value="Empty">Empty</option>
+                                            <option value="Wishlist">Wishlist</option>
+                                        </InputSelect>
+                                        <ValidationMessage For="@(() => bottleModel.Status)" />
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="tags">Tags (comma separated)</label>
+                                        <InputText id="tags" class="form-control" @bind-Value="tagsInput" placeholder="e.g., limited release, barrel proof, store pick" />
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <label for="imageUrl">Image URL</label>
+                                <InputText id="imageUrl" class="form-control" @bind-Value="bottleModel.ImageUrl" placeholder="https://..." />
+                                <small class="text-muted">Direct link to an image of this bottle (optional)</small>
+                                <ValidationMessage For="@(() => bottleModel.ImageUrl)" />
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <label for="notes">Notes</label>
+                                <InputTextArea id="notes" class="form-control" @bind-Value="bottleModel.Notes" rows="3" />
+                                <ValidationMessage For="@(() => bottleModel.Notes)" />
+                            </div>
+                            
+                            <div class="d-flex justify-content-between">
+                                <button type="button" class="btn btn-secondary" @onclick="NavigateBack">Cancel</button>
+                                <button type="submit" class="btn btn-primary" disabled="@isProcessing">
+                                    @if (isProcessing)
+                                    {
+                                        <span class="spinner-border spinner-border-sm mr-1"></span>
+                                        <span>Saving...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Save Changes</span>
+                                    }
+                                </button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Bottle Preview</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center mb-3">
+                            @if (!string.IsNullOrEmpty(bottleModel.ImageUrl))
+                            {
+                                <img src="@bottleModel.ImageUrl" alt="Bottle preview" style="max-height: 200px; max-width: 100%;" class="img-thumbnail" />
+                            }
+                            else
+                            {
+                                <div class="placeholder-image d-flex justify-content-center align-items-center bg-light" style="height: 200px;">
+                                    <span class="oi oi-image text-secondary" style="font-size: 3rem;"></span>
+                                </div>
+                            }
+                        </div>
+                        
+                        <h5>@(string.IsNullOrEmpty(bottleModel.Name) ? "Bottle Name" : bottleModel.Name)</h5>
+                        <p class="text-muted">@(string.IsNullOrEmpty(bottleModel.DistilleryName) ? "Distillery" : bottleModel.DistilleryName)</p>
+                        
+                        <div class="bottle-details small">
+                            <div><strong>Type:</strong> @(string.IsNullOrEmpty(bottleModel.Type) ? "N/A" : bottleModel.Type)</div>
+                            <div><strong>Age:</strong> @(bottleModel.AgeYears > 0 ? $"{bottleModel.AgeYears} Years" : "NAS")</div>
+                            <div><strong>Proof:</strong> @(bottleModel.Proof > 0 ? bottleModel.Proof.ToString() : "N/A")</div>
+                            <div><strong>Status:</strong> @bottleModel.Status</div>
+                        </div>
+                        
+                        @if (!string.IsNullOrEmpty(tagsInput))
+                        {
+                            <div class="mt-3">
+                                <strong>Tags:</strong>
+                                <div>
+                                    @foreach (var tag in ParseTags(tagsInput))
+                                    {
+                                        <span class="badge bg-secondary me-1 mb-1">@tag</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+    
+    private BottleDto bottle;
+    private BottleUpdateDto bottleModel = new BottleUpdateDto();
+    private string tagsInput = string.Empty;
+    
+    private bool loading = true;
+    private bool isProcessing = false;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBottle();
+    }
+    
+    private async Task LoadBottle()
+    {
+        try
+        {
+            loading = true;
+            bottle = await BottleService.GetBottleByIdAsync(Id);
+            
+            if (bottle != null)
+            {
+                // Map bottle data to update model
+                bottleModel = new BottleUpdateDto
+                {
+                    Id = bottle.Id,
+                    Name = bottle.Name,
+                    DistilleryName = bottle.DistilleryName,
+                    Type = bottle.Type,
+                    AgeYears = bottle.AgeYears,
+                    Proof = bottle.Proof,
+                    BottleSizeML = bottle.BottleSizeML,
+                    PurchaseDate = bottle.PurchaseDate,
+                    PurchasePrice = bottle.PurchasePrice,
+                    Status = bottle.Status,
+                    ImageUrl = bottle.ImageUrl,
+                    Notes = bottle.Notes
+                };
+                
+                // Convert tags to comma-separated string
+                if (bottle.Tags != null && bottle.Tags.Any())
+                {
+                    tagsInput = string.Join(", ", bottle.Tags);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", $"Error loading bottle: {ex.Message}");
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+    
+    private List<string> ParseTags(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return new List<string>();
+            
+        return input.Split(',')
+            .Select(t => t.Trim())
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .ToList();
+    }
+    
+    private void NavigateBack()
+    {
+        NavigationManager.NavigateTo("/collection");
+    }
+    
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            isProcessing = true;
+            
+            // Set the tags from the input
+            bottleModel.Tags = ParseTags(tagsInput);
+            
+            // Update the bottle
+            var result = await BottleService.UpdateBottleAsync(bottleModel);
+            
+            if (result)
+            {
+                NavigationManager.NavigateTo("/collection");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Failed to update bottle. Please try again.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"An error occurred: {ex.Message}");
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+}

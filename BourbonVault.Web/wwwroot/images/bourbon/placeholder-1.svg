@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400">
+  <defs>
+    <linearGradient id="g" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#5a2a0f"/>
+      <stop offset="100%" stop-color="#2b1a12"/>
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="#f8f5ef"/>
+  <rect x="20" y="20" width="560" height="360" rx="12" fill="url(#g)"/>
+  <g transform="translate(180,60)">
+    <rect x="80" y="40" width="80" height="240" rx="8" fill="#d97706" stroke="#a16207" stroke-width="3"/>
+    <rect x="100" y="10" width="40" height="40" rx="6" fill="#9a3412"/>
+    <rect x="92" y="110" width="56" height="60" fill="#fef3c7" stroke="#f59e0b"/>
+    <text x="120" y="145" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="#92400e">Bourbon</text>
+  </g>
+  <text x="50%" y="92%" dominant-baseline="middle" text-anchor="middle" font-family="Georgia, serif" font-size="18" fill="#eab308">Bourbon Vault</text>
+</svg>

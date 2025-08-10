@@ -1,0 +1,242 @@
+@page "/tastingnotes"
+@using BourbonVault.Core.DTOs
+@using BourbonVault.Web.Services
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+@attribute [Authorize]
+@inject ITastingNoteService TastingNoteService
+@inject IBottleService BottleService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<h1>My Tasting Notes</h1>
+
+<div class="mb-3 d-flex justify-content-between align-items-center">
+    <div>
+        <button class="btn btn-primary" @onclick="GoToAdd">
+            <span class="oi oi-plus"></span> Add Tasting Note
+        </button>
+    </div>
+    <div class="input-group" style="max-width: 300px">
+        <input type="text" class="form-control" placeholder="Search notes..."
+               @bind-value="searchTerm" @bind-value:event="oninput" @onkeyup="FilterNotes" />
+        <span class="input-group-text">
+            <span class="oi oi-magnifying-glass"></span>
+        </span>
+    </div>
+</div>
+
+<div class="mb-3">
+    <div class="btn-group" role="group">
+        <button class='@GetFilterButtonClass("all")' @onclick="ChangeToAll">All Notes</button>
+        <button class='@GetFilterButtonClass("public")' @onclick="ChangeToPublic">Public Notes</button>
+        <button class='@GetFilterButtonClass("private")' @onclick="ChangeToPrivate">Private Notes</button>
+    </div>
+</div>
+
+@if (loading)
+{
+    <div class="d-flex justify-content-center mt-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (filteredNotes == null || !filteredNotes.Any())
+{
+    <div class="alert alert-info">
+        <h4>No tasting notes found</h4>
+        <p>Start recording your bourbon tasting experiences by adding your first note!</p>
+        <button class="btn btn-primary" @onclick="GoToAdd">
+            Add Your First Tasting Note
+        </button>
+    </div>
+}
+else
+{
+    <div class="row">
+        @foreach (var note in filteredNotes)
+        {
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center @(note.IsPublic ? "bg-success text-white" : "bg-secondary text-white")">
+                        <div>
+                            <strong>@(note.IsPublic ? "Public" : "Private") Note</strong>
+                            <span class="ms-2">@note.TastingDate.ToString("MMM d, yyyy")</span>
+                        </div>
+                        <div>
+                            <span class="badge bg-light text-dark">Rating: @note.Rating/5</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <h5 class="card-title mb-0">@note.BottleName</h5>
+                            <div class="rating">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    if (i <= note.Rating)
+                                    {
+                                        <span class="oi oi-star text-warning"></span>
+                                    }
+                                    else
+                                    {
+                                        <span class="oi oi-star text-muted"></span>
+                                    }
+                                }
+                            </div>
+                        </div>
+                        
+                        <div class="small text-muted mb-3">@note.DistilleryName</div>
+                        
+                        <div class="tasting-sections mb-3">
+                            <div class="tasting-section">
+                                <h6><span class="oi oi-eye me-2"></span>Appearance</h6>
+                                <p class="mb-1">@(string.IsNullOrEmpty(note.Appearance) ? "No notes" : note.Appearance)</p>
+                            </div>
+                            <div class="tasting-section">
+                                <h6><span class="oi oi-aperture me-2"></span>Nose</h6>
+                                <p class="mb-1">@(string.IsNullOrEmpty(note.Nose) ? "No notes" : note.Nose)</p>
+                            </div>
+                            <div class="tasting-section">
+                                <h6><span class="oi oi-drop me-2"></span>Palate</h6>
+                                <p class="mb-1">@(string.IsNullOrEmpty(note.Palate) ? "No notes" : note.Palate)</p>
+                            </div>
+                            <div class="tasting-section">
+                                <h6><span class="oi oi-timer me-2"></span>Finish</h6>
+                                <p class="mb-1">@(string.IsNullOrEmpty(note.Finish) ? "No notes" : note.Finish)</p>
+                            </div>
+                        </div>
+                        
+                        @if (!string.IsNullOrEmpty(note.AdditionalNotes))
+                        {
+                            <div class="additional-notes">
+                                <h6>Additional Notes</h6>
+                                <p>@note.AdditionalNotes</p>
+                            </div>
+                        }
+                    </div>
+                    <div class="card-footer">
+                        <div class="btn-group w-100">
+                            <button class="btn btn-outline-primary" @onclick="@(() => ViewNote(note.Id))">
+                                <span class="oi oi-eye"></span> View
+                            </button>
+                            <button class="btn btn-outline-secondary" @onclick="@(() => EditNote(note.Id))">
+                                <span class="oi oi-pencil"></span> Edit
+                            </button>
+                            <button class="btn btn-outline-danger" @onclick="() => DeleteNote(note.Id)">
+                                <span class="oi oi-trash"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private IEnumerable<TastingNoteDto> notes;
+    private IEnumerable<TastingNoteDto> filteredNotes;
+    private Dictionary<int, BottleDto> bottleCache = new Dictionary<int, BottleDto>();
+    private bool loading = true;
+    private string searchTerm = "";
+    private string filterMode = "all"; // all, public, private
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadNotes();
+    }
+    
+    private async Task LoadNotes()
+    {
+        loading = true;
+        notes = await TastingNoteService.GetAllTastingNotesAsync();
+        ApplyFilters();
+        loading = false;
+    }
+    
+    private void FilterNotes()
+    {
+        ApplyFilters();
+    }
+    
+    private void ChangeFilter(string mode)
+    {
+        filterMode = mode;
+        ApplyFilters();
+    }
+    
+    private void ApplyFilters()
+    {
+        var filtered = notes;
+        
+        // Apply visibility filter
+        if (filterMode == "public")
+        {
+            filtered = filtered.Where(n => n.IsPublic);
+        }
+        else if (filterMode == "private")
+        {
+            filtered = filtered.Where(n => !n.IsPublic);
+        }
+        
+        // Apply search filter if needed
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filtered = filtered.Where(n => 
+                n.BottleName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                n.Appearance?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true ||
+                n.Nose?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true ||
+                n.Palate?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true ||
+                n.Finish?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true ||
+                n.AdditionalNotes?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true
+            );
+        }
+        
+        // Order by date descending (newest first)
+        filteredNotes = filtered.OrderByDescending(n => n.TastingDate);
+    }
+    
+    private void GoToAdd()
+    {
+        NavigationManager.NavigateTo("/tastingnotes/add");
+    }
+
+    private string GetFilterButtonClass(string mode)
+    {
+        return $"btn {(filterMode == mode ? "btn-primary" : "btn-outline-primary")}";
+    }
+
+    private void ChangeToAll() => ChangeFilter("all");
+    private void ChangeToPublic() => ChangeFilter("public");
+    private void ChangeToPrivate() => ChangeFilter("private");
+
+    private void ViewNote(int id)
+    {
+        NavigationManager.NavigateTo($"/tastingnotes/details/{id}");
+    }
+
+    private void EditNote(int id)
+    {
+        NavigationManager.NavigateTo($"/tastingnotes/edit/{id}");
+    }
+
+    private async Task DeleteNote(int id)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this tasting note?"))
+        {
+            return;
+        }
+        
+        var success = await TastingNoteService.DeleteTastingNoteAsync(id);
+        
+        if (success)
+        {
+            await LoadNotes();
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Failed to delete the tasting note.");
+        }
+    }
+}
